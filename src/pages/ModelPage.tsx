@@ -8,10 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Wand2, PlayCircle, PauseCircle, Download, Save } from "lucide-react";
-import { generateMusicWithBark, loadBarkModel } from '@/utils/barkModel';
+import { generateMusicWithBark, loadBarkModel, audioBufferToBlob } from '@/utils/barkModel';
 import AudioPlayer from '@/components/AudioPlayer';
 import Header from '@/components/Header';
-import { type ProgressInfo } from '@huggingface/transformers';
+import { type ProgressCallback } from '@huggingface/transformers';
 
 const ModelPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,12 +30,16 @@ const ModelPage = () => {
       try {
         setIsModelReady(false);
         toast.info("Loading Bark AI model...");
-        await loadBarkModel((progressInfo: ProgressInfo) => {
-          // Extract progress percentage from progressInfo
-          if ('progress' in progressInfo) {
-            setProgress(progressInfo.progress * 100);
+        
+        const progressCallback: ProgressCallback = (progressInfo) => {
+          // Check if progressInfo has a progress property before using it
+          if (progressInfo && typeof progressInfo === 'object' && 'progress' in progressInfo) {
+            const progressValue = progressInfo.progress;
+            setProgress(progressValue * 100);
           }
-        });
+        };
+        
+        await loadBarkModel(progressCallback);
         setIsModelReady(true);
         toast.success("Bark AI model loaded successfully!");
       } catch (error) {
@@ -58,25 +62,27 @@ const ModelPage = () => {
       setProgress(0);
       toast.info("Generating music from your prompt...");
 
+      const progressCallback: ProgressCallback = (progressInfo) => {
+        // Check if progressInfo has a progress property before using it
+        if (progressInfo && typeof progressInfo === 'object' && 'progress' in progressInfo) {
+          const progressValue = progressInfo.progress;
+          setProgress(progressValue * 100);
+        }
+      };
+
       const result = await generateMusicWithBark(
         { 
           prompt: prompt.trim(),
           temperature,
           lengthPenalty
         },
-        (progressInfo: ProgressInfo) => {
-          // Extract progress percentage from progressInfo
-          if ('progress' in progressInfo) {
-            setProgress(progressInfo.progress * 100);
-          }
-        }
+        progressCallback
       );
 
       if (result?.audio) {
         setGeneratedAudio(result.audio);
         
         // Convert to blob and create URL
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         const blob = await audioBufferToBlob(result.audio);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
@@ -88,82 +94,6 @@ const ModelPage = () => {
       toast.error("Failed to generate music. Please try a different prompt or settings.");
     } finally {
       setIsGenerating(false);
-    }
-  };
-
-  const audioBufferToBlob = async (audioBuffer: AudioBuffer): Promise<Blob> => {
-    // Create an offline audio context
-    const offlineContext = new OfflineAudioContext(
-      audioBuffer.numberOfChannels,
-      audioBuffer.length,
-      audioBuffer.sampleRate
-    );
-
-    // Create buffer source
-    const source = offlineContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(offlineContext.destination);
-    source.start(0);
-
-    // Render
-    const renderedBuffer = await offlineContext.startRendering();
-    
-    // Convert to WAV
-    const wavBlob = await audioBufferToWav(renderedBuffer);
-    return wavBlob;
-  };
-
-  const audioBufferToWav = (buffer: AudioBuffer): Promise<Blob> => {
-    return new Promise(resolve => {
-      // Simplified WAV encoder
-      const numOfChannels = buffer.numberOfChannels;
-      const length = buffer.length * numOfChannels * 2;
-      const sampleRate = buffer.sampleRate;
-      
-      const arrayBuffer = new ArrayBuffer(44 + length);
-      const view = new DataView(arrayBuffer);
-      
-      // RIFF chunk descriptor
-      writeString(view, 0, 'RIFF');
-      view.setUint32(4, 36 + length, true);
-      writeString(view, 8, 'WAVE');
-      
-      // fmt sub-chunk
-      writeString(view, 12, 'fmt ');
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true);
-      view.setUint16(22, numOfChannels, true);
-      view.setUint32(24, sampleRate, true);
-      view.setUint32(28, sampleRate * numOfChannels * 2, true);
-      view.setUint16(32, numOfChannels * 2, true);
-      view.setUint16(34, 16, true);
-      
-      // data sub-chunk
-      writeString(view, 36, 'data');
-      view.setUint32(40, length, true);
-      
-      // Write PCM samples
-      const channels = [];
-      for (let i = 0; i < numOfChannels; i++) {
-        channels.push(buffer.getChannelData(i));
-      }
-      
-      let offset = 44;
-      for (let i = 0; i < buffer.length; i++) {
-        for (let channel = 0; channel < numOfChannels; channel++) {
-          const sample = Math.max(-1, Math.min(1, channels[channel][i]));
-          view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-          offset += 2;
-        }
-      }
-      
-      resolve(new Blob([view], { type: 'audio/wav' }));
-    });
-  };
-
-  const writeString = (view: DataView, offset: number, string: string) => {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
     }
   };
 

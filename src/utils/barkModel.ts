@@ -1,5 +1,5 @@
 
-import { pipeline, env, type ProgressCallback } from '@huggingface/transformers';
+import { env, type ProgressCallback } from '@huggingface/transformers';
 
 // Configure transformers.js
 env.allowLocalModels = false;
@@ -17,8 +17,9 @@ interface GenerationOptions {
   lengthPenalty?: number;
 }
 
-// Create a typed loader function for the bark model
-let barkPipeline: any = null;
+// Create storage for the bark pipeline
+let processor: any = null;
+let model: any = null;
 
 /**
  * Loads the Bark text-to-audio model
@@ -28,40 +29,59 @@ export const loadBarkModel = async (onProgress?: ProgressCallback) => {
     console.log('Loading Bark model...');
     
     // If we already have the model loaded, return it
-    if (barkPipeline) {
-      return barkPipeline;
+    if (processor && model) {
+      return { processor, model };
     }
     
-    // Use the text-to-audio pipeline
-    barkPipeline = await pipeline(
-      'text-to-audio',
-      BARK_MODEL_ID,
-      {
-        // Remove the quantized property as it's not supported in the type definition
-        progress_callback: onProgress,
-        device: 'cpu', // Use CPU for compatibility
-      }
-    );
+    // Import the transformers dynamically to avoid tree-shaking issues
+    const { AutoProcessor, AutoModel } = await import('@huggingface/transformers');
+    
+    // First load the processor
+    processor = await AutoProcessor.from_pretrained(BARK_MODEL_ID, {
+      progress_callback: onProgress,
+      device: 'cpu', // Use CPU for compatibility
+    });
+    
+    // Then load the model
+    model = await AutoModel.from_pretrained(BARK_MODEL_ID, {
+      progress_callback: onProgress,
+      device: 'cpu', // Use CPU for compatibility
+    });
     
     console.log('Bark model loaded successfully');
-    return barkPipeline;
+    return { processor, model };
   } catch (error) {
     console.error('Error loading Bark model:', error);
     
     // For development purposes, return a mock implementation
     console.log('Using mock implementation for development');
     return {
-      async generate(options: any) {
-        console.log('Mock generate called with:', options);
-        // Mock an audio generation delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Return a mock result
-        return {
-          type: 'audio',
-          audio: new AudioBuffer({ length: 44100, sampleRate: 44100, numberOfChannels: 1 }),
-          sampling_rate: 24000
-        };
+      processor: {
+        async __call__(text: string[]) {
+          console.log('Mock processor called with:', text);
+          // Return mock input tensors
+          return {
+            text: text,
+            return_tensors: "pt"
+          };
+        }
+      },
+      model: {
+        async generate(options: any) {
+          console.log('Mock generate called with:', options);
+          // Mock a generation delay
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Return a mock audio buffer
+          return {
+            type: 'audio',
+            audio: new AudioBuffer({ length: 44100, sampleRate: 24000, numberOfChannels: 1 }),
+            sampling_rate: 24000
+          };
+        },
+        generation_config: {
+          sample_rate: 24000
+        }
       }
     };
   }
@@ -78,64 +98,50 @@ export const generateMusicWithBark = async (
     const { prompt, voicePreset = DEFAULT_VOICE, temperature = 0.7, lengthPenalty = 1.0 } = options;
     
     // Load the model if not already loaded
-    const model = await loadBarkModel(onProgress);
+    const { processor, model } = await loadBarkModel(onProgress);
     
     console.log(`Generating audio for: "${prompt}" with voice: ${voicePreset}`);
     
-    // Generate the audio
-    const result = await model(prompt, {
-      voice_preset: voicePreset,
-      temperature: temperature,
-      length_penalty: lengthPenalty,
+    // Process the text input
+    const inputs = await processor([prompt], {
+      return_tensors: "pt"
     });
     
+    // Generate the audio
+    const audioValues = await model.generate(
+      inputs, 
+      {
+        do_sample: true,
+        temperature: temperature,
+        length_penalty: lengthPenalty,
+        voice_preset: voicePreset
+      }
+    );
+    
     console.log('Audio generation complete');
-    return result;
+    
+    // Create an audio buffer from the audio values
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioBuffer = audioContext.createBuffer(
+      1, // mono channel
+      audioValues.length,
+      model.generation_config.sample_rate || 24000
+    );
+    
+    // Fill the buffer with audio data
+    const channelData = audioBuffer.getChannelData(0);
+    for (let i = 0; i < audioValues.length; i++) {
+      channelData[i] = audioValues[i];
+    }
+    
+    return {
+      audio: audioBuffer,
+      sampling_rate: model.generation_config.sample_rate || 24000
+    };
   } catch (error) {
     console.error('Error generating audio with Bark:', error);
     throw new Error('Failed to generate audio. Please try again with a shorter prompt or different settings.');
   }
-};
-
-/**
- * Simulates training a custom model based on the Bark model
- * Note: This is a mock function since browser-based training is limited
- */
-export const simulateTraining = async (
-  audioSamples: Array<{ audio: Blob, text: string }>,
-  options: { epochs: number, learningRate: number },
-  onProgress: (progress: number) => void
-) => {
-  const { epochs, learningRate } = options;
-  
-  console.log(`Starting simulated training with ${audioSamples.length} samples, ${epochs} epochs, learning rate: ${learningRate}`);
-  
-  // Simulate the training process
-  const totalSteps = epochs * audioSamples.length;
-  let currentStep = 0;
-  
-  for (let epoch = 0; epoch < epochs; epoch++) {
-    console.log(`Epoch ${epoch + 1}/${epochs}`);
-    
-    for (let i = 0; i < audioSamples.length; i++) {
-      // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      currentStep++;
-      const progress = (currentStep / totalSteps) * 100;
-      onProgress(progress);
-      
-      console.log(`Sample ${i + 1}/${audioSamples.length}, Progress: ${progress.toFixed(1)}%`);
-    }
-  }
-  
-  console.log('Training simulation complete');
-  
-  return {
-    modelId: `custom-bark-${Date.now()}`,
-    accuracy: 0.85 + (Math.random() * 0.1), // Simulated accuracy between 0.85 and 0.95
-    loss: 0.1 + (Math.random() * 0.05),      // Simulated loss between 0.1 and 0.15
-  };
 };
 
 /**
