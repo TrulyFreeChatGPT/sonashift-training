@@ -37,7 +37,7 @@ export const loadBarkModel = async (onProgress?: ProgressCallback) => {
       'text-to-audio',
       BARK_MODEL_ID,
       {
-        quantized: true, // Use quantized model for better browser performance
+        // Remove the quantized property as it's not supported in the type definition
         progress_callback: onProgress,
         device: 'cpu', // Use CPU for compatibility
       }
