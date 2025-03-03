@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Waveform, Music, Bot, History, ChevronsUp } from "lucide-react";
+import { Waves, Music, Bot, History, ChevronsUp } from "lucide-react";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import TrainingSection from "@/components/TrainingSection";
@@ -57,7 +57,7 @@ const Index = () => {
         <section className="text-center max-w-3xl mx-auto mb-16 space-y-6 animate-slide-up">
           <div className="flex justify-center items-center mb-4">
             <div className="inline-flex p-3 rounded-full bg-primary/10 text-primary">
-              <Waveform className="h-8 w-8" />
+              <Waves className="h-8 w-8" />
             </div>
           </div>
           
@@ -131,7 +131,7 @@ const Index = () => {
       <footer className="bg-secondary/30 border-t border-border py-6">
         <div className="container flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
-            <Waveform className="h-5 w-5 text-primary" />
+            <Waves className="h-5 w-5 text-primary" />
             <span className="font-medium">HarmonyAI</span>
           </div>
           

@@ -5,7 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { Waveform, Bot, FileAudio, BarChart3, Play, Pause, AlertTriangle } from "lucide-react";
+import { Waves, Bot, FileAudio, BarChart3, Play, Pause, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import AudioUploader from './AudioUploader';
 
@@ -53,6 +53,14 @@ const TrainingSection = () => {
     });
   };
 
+  // Helper function to safely trigger tab changes
+  const changeTab = (tabValue: string) => {
+    const tabTrigger = document.querySelector(`[data-value="${tabValue}"]`) as HTMLElement;
+    if (tabTrigger && tabTrigger.click) {
+      tabTrigger.click();
+    }
+  };
+
   return (
     <Tabs defaultValue="upload" className="w-full">
       <TabsList className="grid grid-cols-3 mb-6">
@@ -65,7 +73,7 @@ const TrainingSection = () => {
           <span>Parameters</span>
         </TabsTrigger>
         <TabsTrigger value="training" className="flex items-center gap-2 py-2">
-          <Waveform className="h-4 w-4" />
+          <Waves className="h-4 w-4" />
           <span>Training</span>
         </TabsTrigger>
       </TabsList>
@@ -85,7 +93,7 @@ const TrainingSection = () => {
             <p className="text-sm text-muted-foreground">
               Supported formats: WAV, MP3, AIFF, FLAC
             </p>
-            <Button onClick={() => document.querySelector('[data-value="parameters"]')?.click()}>
+            <Button onClick={() => changeTab("parameters")}>
               Next Step
             </Button>
           </CardFooter>
@@ -160,10 +168,10 @@ const TrainingSection = () => {
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => document.querySelector('[data-value="upload"]')?.click()}>
+            <Button variant="outline" onClick={() => changeTab("upload")}>
               Previous
             </Button>
-            <Button onClick={() => document.querySelector('[data-value="training"]')?.click()}>
+            <Button onClick={() => changeTab("training")}>
               Next Step
             </Button>
           </CardFooter>
@@ -245,7 +253,7 @@ const TrainingSection = () => {
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => document.querySelector('[data-value="parameters"]')?.click()}>
+            <Button variant="outline" onClick={() => changeTab("parameters")}>
               Previous
             </Button>
             
