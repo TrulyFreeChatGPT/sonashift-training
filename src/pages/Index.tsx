@@ -11,6 +11,7 @@ import GenerationSection from "@/components/GenerationSection";
 import HistoryPanel from "@/components/HistoryPanel";
 import AudioWaveform from '@/components/AudioWaveform';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Link } from 'react-router-dom';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("generate");
@@ -38,7 +39,7 @@ const Index = () => {
     // Welcome toast
     const timer = setTimeout(() => {
       toast.info("Welcome to HarmonyAI", {
-        description: "Your platform for training and testing music AI models",
+        description: "Try our new Bark AI model for advanced music generation",
       });
     }, 1000);
 
@@ -67,7 +68,7 @@ const Index = () => {
           
           <p className="text-xl text-muted-foreground">
             Upload audio samples, train custom models, and generate
-            unique music compositions with advanced AI technology.
+            unique music compositions using Suno's Bark AI technology.
           </p>
           
           <div className="flex flex-wrap justify-center gap-4 pt-2">
@@ -79,6 +80,16 @@ const Index = () => {
               <Music className="h-4 w-4" />
               <span>Generate Music</span>
             </Button>
+            <Link to="/model/bark">
+              <Button 
+                variant="default" 
+                size="lg" 
+                className="gap-2"
+              >
+                <Waves className="h-4 w-4" />
+                <span>Try Bark AI</span>
+              </Button>
+            </Link>
             <Button 
               variant="outline" 
               size="lg" 
@@ -121,6 +132,28 @@ const Index = () => {
           </TabsContent>
         </Tabs>
         
+        {/* Bark AI Feature Highlight */}
+        <section className="max-w-5xl mx-auto mt-16 bg-primary/5 rounded-lg p-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="space-y-4 max-w-md">
+              <h2 className="text-2xl font-bold">Experience Suno's Bark AI</h2>
+              <p className="text-muted-foreground">
+                Our platform now features Suno's Bark AI model, delivering state-of-the-art
+                audio generation capabilities. Create music, sound effects, and more with simple text prompts.
+              </p>
+              <Link to="/model/bark">
+                <Button className="gap-2">
+                  <Waves className="h-4 w-4" />
+                  Try Bark AI Now
+                </Button>
+              </Link>
+            </div>
+            <div className="w-full max-w-sm h-48 flex items-center justify-center bg-primary/10 rounded-lg">
+              <AudioWaveform animated={true} isPlaying={true} />
+            </div>
+          </div>
+        </section>
+        
         {/* History Section */}
         <section className="max-w-5xl mx-auto mt-12">
           <HistoryPanel />
@@ -136,7 +169,7 @@ const Index = () => {
           </div>
           
           <p className="text-sm text-muted-foreground text-center">
-            A platform for training and testing AI music models
+            A platform for training and testing AI music models featuring Suno's Bark AI
           </p>
           
           <div className="flex gap-4">
