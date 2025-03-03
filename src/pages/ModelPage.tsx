@@ -11,6 +11,7 @@ import { Wand2, PlayCircle, PauseCircle, Download, Save } from "lucide-react";
 import { generateMusicWithBark, loadBarkModel } from '@/utils/barkModel';
 import AudioPlayer from '@/components/AudioPlayer';
 import Header from '@/components/Header';
+import { type ProgressInfo } from '@huggingface/transformers';
 
 const ModelPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,8 +30,11 @@ const ModelPage = () => {
       try {
         setIsModelReady(false);
         toast.info("Loading Bark AI model...");
-        await loadBarkModel((progress) => {
-          setProgress(progress);
+        await loadBarkModel((progressInfo: ProgressInfo) => {
+          // Extract progress percentage from progressInfo
+          if ('progress' in progressInfo) {
+            setProgress(progressInfo.progress * 100);
+          }
         });
         setIsModelReady(true);
         toast.success("Bark AI model loaded successfully!");
@@ -60,7 +64,12 @@ const ModelPage = () => {
           temperature,
           lengthPenalty
         },
-        (progress) => setProgress(progress)
+        (progressInfo: ProgressInfo) => {
+          // Extract progress percentage from progressInfo
+          if ('progress' in progressInfo) {
+            setProgress(progressInfo.progress * 100);
+          }
+        }
       );
 
       if (result?.audio) {

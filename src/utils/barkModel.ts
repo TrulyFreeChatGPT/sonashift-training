@@ -1,5 +1,5 @@
 
-import { pipeline, env } from '@huggingface/transformers';
+import { pipeline, env, type ProgressCallback } from '@huggingface/transformers';
 
 // Configure transformers.js
 env.allowLocalModels = false;
@@ -23,7 +23,7 @@ let barkPipeline: any = null;
 /**
  * Loads the Bark text-to-audio model
  */
-export const loadBarkModel = async (onProgress?: (progress: number) => void) => {
+export const loadBarkModel = async (onProgress?: ProgressCallback) => {
   try {
     console.log('Loading Bark model...');
     
@@ -72,7 +72,7 @@ export const loadBarkModel = async (onProgress?: (progress: number) => void) => 
  */
 export const generateMusicWithBark = async (
   options: GenerationOptions,
-  onProgress?: (progress: number) => void
+  onProgress?: ProgressCallback
 ) => {
   try {
     const { prompt, voicePreset = DEFAULT_VOICE, temperature = 0.7, lengthPenalty = 1.0 } = options;
